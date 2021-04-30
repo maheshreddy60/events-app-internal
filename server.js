@@ -24,6 +24,52 @@ const mockEvents = {
 };
 
 
+const Firestore = require("@google-cloud/firestore");
+
+// initialize Firestore and set project id from env var
+const firestore = new Firestore(
+    {
+        projectId: process.env.GOOGLE_CLOUD_PROJECT
+    }
+);
+
+app.post('/event', (req, res) => {
+    // create a new object from the json data and add an id
+    const ev = { 
+        title: req.body.title, 
+        description: req.body.description,
+        id : mockEvents.events.length + 1
+     }
+// this will create the Events collection if it does not exist
+    firestore.collection("Events").add(ev).then(ret => {
+        getEvents(req, res);
+    });
+
+});
+
+function getEvents(req, res) {
+    firestore.collection("Events").get()
+        .then((snapshot) => {
+            if (!snapshot.empty) {
+                const ret = { events: []};
+                snapshot.docs.forEach(element => {
+                    ret.events.push(element.data());
+                }, this);
+                console.log(ret);
+                res.json(ret);
+            } else {
+                 res.json(mockEvents);
+            }
+        })
+        .catch((err) => {
+            console.error('Error getting events', err);
+            res.json(mockEvents);
+        });
+};
+
+app.get('/events', (req, res) => {
+    getEvents(req, res);
+});
 
 
 // health endpoint - returns an empty array
